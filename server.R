@@ -200,7 +200,7 @@ server <- function(input, output, session) {
   observe({
     req(input$sklady)
     vPlayers <- input$sklady
-    rFootball$vTableM <- subset(rFootball$table, Red.Def %in% vPlayers & Blue.Def %in% vPlayers & Red.Atk %in% vPlayers & Blue.Atk %in% vPlayers)
+    rFootball$vTableM <- subset(rFootball$table[,1:6], Red.Def %in% vPlayers & Blue.Def %in% vPlayers & Red.Atk %in% vPlayers & Blue.Atk %in% vPlayers)
   })
   
   output$RankingMainTable <- renderDataTable(server = FALSE, {
@@ -244,12 +244,42 @@ server <- function(input, output, session) {
       return()
     }
     
+    vLooser <- c(-2, -1, 0, 1)
+    vWinner <- c(5, 4, 3, 2)
+    
+    # dodanie punktow zwyciezcom i przegranym
     if(input$redORblue == "blue") {
       rFootball$table[vUklad,"Score.Blue"] <- 10
       rFootball$table[vUklad,"Score.Red"] <- input$looserScore
+      if(input$looserScore == 0) {
+        rFootball$table[vUklad,"Points.Blue"] <- vWinner[1]
+        rFootball$table[vUklad,"Points.Red"] <- vLooser[1]
+      } else if(input$looserScore == 9) {
+        rFootball$table[vUklad,"Points.Blue"] <- vWinner[4]
+        rFootball$table[vUklad,"Points.Red"] <- vLooser[4]
+      } else if(input$looserScore <= 4) {
+        rFootball$table[vUklad,"Points.Blue"] <- vWinner[2]
+        rFootball$table[vUklad,"Points.Red"] <- vLooser[2]
+      } else if(input$looserScore > 4) {
+        rFootball$table[vUklad,"Points.Blue"] <- vWinner[3]
+        rFootball$table[vUklad,"Points.Red"] <- vLooser[3]
+      }
     } else if(input$redORblue == "red") {
       rFootball$table[vUklad,"Score.Red"] <- 10
       rFootball$table[vUklad,"Score.Blue"] <- input$looserScore
+      if(input$looserScore == 0) {
+        rFootball$table[vUklad,"Points.Blue"] <- vLooser[1]
+        rFootball$table[vUklad,"Points.Red"] <- vWinner[1]
+      } else if(input$looserScore == 9) {
+        rFootball$table[vUklad,"Points.Blue"] <- vLooser[4]
+        rFootball$table[vUklad,"Points.Red"] <- vWinner[4]
+      } else if(input$looserScore <= 4) {
+        rFootball$table[vUklad,"Points.Blue"] <- vLooser[2]
+        rFootball$table[vUklad,"Points.Red"] <- vWinner[2]
+      } else if(input$looserScore > 4) {
+        rFootball$table[vUklad,"Points.Blue"] <- vLooser[3]
+        rFootball$table[vUklad,"Points.Red"] <- vWinner[3]
+      }
     }
     
     load("./QuantFootball.rda")
@@ -258,8 +288,6 @@ server <- function(input, output, session) {
     
     # liczba rozegranych spotkan (niewazne ktory zawodnik zostanie wziety)
     vLen <- length(QuantFootball[[1]]$mecze)
-    vLooser <- c(-2, -1, 0, 1)
-    vWinner <- c(5, 4, 3, 2)
     
     for(i in 1:6) {
       # niegrajacym przepisuje to samo
@@ -433,24 +461,54 @@ server <- function(input, output, session) {
   })
   
   
+  
   output$TabelaPara <- renderDataTable({
     req(QuantFootball)
     req(rFootball$table)
     
     load("./QuantFootball.rda")
     
-    vObr <- vFootballers[2] #temp
-    vAtk <- vFootballers[1]
-    vMecze <- 0
-    vWin <- 0
-    vSum <- 0
-    vSrednia <- 0
+    vLooser <- c(-2, -1, 0, 1)
+    vWinner <- c(5, 4, 3, 2)
     
-    vTabela <- data.frame(cbind(vObr, vAtk, vMecze, vWin, vSum, vSrednia))
-    colnames(vTabela) <- c("Obrońca", "Napastnik" , "Mecze", "Wygrane", "Punkty", "Średnia")
+    vTabelaBestTeam <- unique(rFootball$table[,1:2])
+    colnames(vTabelaBestTeam) <- c("Obrona", "Napad")
+   
+    vTabelaBestTeam$Mecze <- apply(vTabelaBestTeam, 1, function(i) {
+      return(nrow(na.omit(rFootball$table[intersect(which(rFootball$table$Blue.Def == i[1]), which(rFootball$table$Blue.Atk == i[2])),])) + 
+               nrow(na.omit(rFootball$table[intersect(which(rFootball$table$Red.Def == i[1]), which(rFootball$table$Red.Atk == i[2])),])))
+    })
+    
+    vTabelaBestTeam <- vTabelaBestTeam[which(vTabelaBestTeam$Mecze > 0),]
+    
+    vTabelaBestTeam$Wygrane <- apply(vTabelaBestTeam, 1, function(i) {
+      return(nrow(na.omit(rFootball$table[intersect(intersect(which(rFootball$table$Blue.Def == i[1]),
+                                                              which(rFootball$table$Blue.Atk == i[2])),
+                                                    which(rFootball$table$Score.Blue == 10)),])) + 
+               nrow(na.omit(rFootball$table[intersect(intersect(which(rFootball$table$Red.Def == i[1]),
+                                                                which(rFootball$table$Red.Atk == i[2])),
+                                                      which(rFootball$table$Score.Red == 10)),])))
+    })
+    
+    vTabelaBestTeam$Punkty <- apply(vTabelaBestTeam, 1, function(i) {
+      return(sum(na.omit(rFootball$table[intersect(which(rFootball$table$Blue.Def == i[1]), which(rFootball$table$Blue.Atk == i[2])),])$Points.Blue) + 
+               sum(na.omit(rFootball$table[intersect(which(rFootball$table$Red.Def == i[1]), which(rFootball$table$Red.Atk == i[2])),])$Points.Red))
+    })
+    
+    vTabelaBestTeam$Srednia <- round(vTabelaBestTeam$Punkty/vTabelaBestTeam$Mecze, 2)
+    
+    vTabelaBestTeam <- vTabelaBestTeam[order(vTabelaBestTeam$Srednia, 
+                                                                 vTabelaBestTeam$Punkty,
+                                                                 vTabelaBestTeam$Wygrane,
+                                                                 decreasing = TRUE),]
+    rFootball$Team <- vTabelaBestTeam
+    
+    NetworkSelected <- ifelse(nchar(input$TeamNetwork_selected)>0,
+                              which(paste0(vTabelaBestTeam$Obrona, "-", vTabelaBestTeam$Napad) == input$TeamNetwork_selected),
+                              1)
     
     datatable(
-      vTabela,        
+      vTabelaBestTeam[unique(c(1,NetworkSelected)),],        
       options = list(
         paging = FALSE,
         searching = FALSE,
@@ -461,6 +519,30 @@ server <- function(input, output, session) {
       rownames=FALSE
     )
   })
+  
+  output$TeamNetwork <- renderVisNetwork({
+    nodes <- data.frame(id = paste0(rFootball$Team$Obrona, "-", rFootball$Team$Napad),
+                        label = paste0(rFootball$Team$Obrona, "-", rFootball$Team$Napad),
+                        group = c("Leader", rep("Follower", nrow(rFootball$Team)-1)),
+                        value = rFootball$Team$Srednia + 1,
+                        title = rFootball$Team$Srednia)
+    # edges <- data.frame(from = paste0(na.omit(rFootball$table)$Blue.Def, "-", na.omit(rFootball$table)$Blue.Atk),
+    #                     to = paste0(na.omit(rFootball$table)$Red.Def, "-", na.omit(rFootball$table)$Red.Atk))
+    edges <- rbind(data.frame(from = paste0(na.omit(rFootball$table[which(rFootball$table$Score.Blue == 10),])$Blue.Def, "-", na.omit(rFootball$table[which(rFootball$table$Score.Blue == 10),])$Blue.Atk),
+                        to = paste0(na.omit(rFootball$table[which(rFootball$table$Score.Blue == 10),])$Red.Def, "-", na.omit(rFootball$table[which(rFootball$table$Score.Blue == 10),])$Red.Atk)),
+                   data.frame(from = paste0(na.omit(rFootball$table[which(rFootball$table$Score.Red == 10),])$Red.Def, "-", na.omit(rFootball$table[which(rFootball$table$Score.Red == 10),])$Red.Atk),
+                              to = paste0(na.omit(rFootball$table[which(rFootball$table$Score.Red == 10),])$Blue.Def, "-", na.omit(rFootball$table[which(rFootball$table$Score.Red == 10),])$Blue.Atk)))
+    # nodes <- data.frame(id = 1:3)
+    # edges <- data.frame(from = c(1,2), to = c(1,3))
+    visNetwork(nodes, edges, width = "100%") %>%
+      visOptions(nodesIdSelection = TRUE) %>%
+      visEdges(arrows = 'to') %>%
+      # visGroups(groupname = "Leader", shape = "icon", icon = list(code = "f007", size = 75, color = "blue")) %>%
+      # visGroups(groupname = "Follower", shape = "icon", icon = list(code = "f007", size = 50, color = "lightblue")) %>%
+      addFontAwesome()
+  })
+  
+  
   
   output$TabelaObrona <- renderDataTable({
     req(QuantFootball)
@@ -548,6 +630,9 @@ server <- function(input, output, session) {
       rownames=FALSE
     )
   })
+  
+  
+  
   
   output$TabelaAtak <- renderDataTable({
     req(QuantFootball)
