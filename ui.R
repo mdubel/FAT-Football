@@ -99,8 +99,10 @@ ui <- dashboardPage(
                status = "primary",
                width = 12,
                collapsible = TRUE,
-               collapsed = FALSE,
-               dataTableOutput("TabelaPara")
+               collapsed = TRUE,
+               dataTableOutput("TabelaPara"),
+               br(),
+               visNetworkOutput("TeamNetwork")
               )
             ),
             fluidRow(     

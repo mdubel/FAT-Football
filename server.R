@@ -497,10 +497,18 @@ server <- function(input, output, session) {
     
     vTabelaBestTeam$Srednia <- round(vTabelaBestTeam$Punkty/vTabelaBestTeam$Mecze, 2)
     
-    vTabelaBestTeam <- vTabelaBestTeam[order(vTabelaBestTeam$Srednia, vTabelaBestTeam$Punkty, vTabelaBestTeam$Wygrane, decreasing = TRUE),]
+    vTabelaBestTeam <- vTabelaBestTeam[order(vTabelaBestTeam$Srednia, 
+                                                                 vTabelaBestTeam$Punkty,
+                                                                 vTabelaBestTeam$Wygrane,
+                                                                 decreasing = TRUE),]
+    rFootball$Team <- vTabelaBestTeam
+    
+    NetworkSelected <- ifelse(nchar(input$TeamNetwork_selected)>0,
+                              which(paste0(vTabelaBestTeam$Obrona, "-", vTabelaBestTeam$Napad) == input$TeamNetwork_selected),
+                              1)
     
     datatable(
-      vTabelaBestTeam[1,],        
+      vTabelaBestTeam[unique(c(1,NetworkSelected)),],        
       options = list(
         paging = FALSE,
         searching = FALSE,
@@ -510,6 +518,28 @@ server <- function(input, output, session) {
       ),
       rownames=FALSE
     )
+  })
+  
+  output$TeamNetwork <- renderVisNetwork({
+    nodes <- data.frame(id = paste0(rFootball$Team$Obrona, "-", rFootball$Team$Napad),
+                        label = paste0(rFootball$Team$Obrona, "-", rFootball$Team$Napad),
+                        group = c("Leader", rep("Follower", nrow(rFootball$Team)-1)),
+                        value = rFootball$Team$Srednia + 1,
+                        title = rFootball$Team$Srednia)
+    # edges <- data.frame(from = paste0(na.omit(rFootball$table)$Blue.Def, "-", na.omit(rFootball$table)$Blue.Atk),
+    #                     to = paste0(na.omit(rFootball$table)$Red.Def, "-", na.omit(rFootball$table)$Red.Atk))
+    edges <- rbind(data.frame(from = paste0(na.omit(rFootball$table[which(rFootball$table$Score.Blue == 10),])$Blue.Def, "-", na.omit(rFootball$table[which(rFootball$table$Score.Blue == 10),])$Blue.Atk),
+                        to = paste0(na.omit(rFootball$table[which(rFootball$table$Score.Blue == 10),])$Red.Def, "-", na.omit(rFootball$table[which(rFootball$table$Score.Blue == 10),])$Red.Atk)),
+                   data.frame(from = paste0(na.omit(rFootball$table[which(rFootball$table$Score.Red == 10),])$Red.Def, "-", na.omit(rFootball$table[which(rFootball$table$Score.Red == 10),])$Red.Atk),
+                              to = paste0(na.omit(rFootball$table[which(rFootball$table$Score.Red == 10),])$Blue.Def, "-", na.omit(rFootball$table[which(rFootball$table$Score.Red == 10),])$Blue.Atk)))
+    # nodes <- data.frame(id = 1:3)
+    # edges <- data.frame(from = c(1,2), to = c(1,3))
+    visNetwork(nodes, edges, width = "100%") %>%
+      visOptions(nodesIdSelection = TRUE) %>%
+      visEdges(arrows = 'to') %>%
+      # visGroups(groupname = "Leader", shape = "icon", icon = list(code = "f007", size = 75, color = "blue")) %>%
+      # visGroups(groupname = "Follower", shape = "icon", icon = list(code = "f007", size = 50, color = "lightblue")) %>%
+      addFontAwesome()
   })
   
   

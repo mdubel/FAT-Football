@@ -9,7 +9,7 @@
 "Toporek";"Segit";"Rucki";"Kruczyk";10;6;3;0
 "Segit";"Toporek";"Rucki";"Kruczyk";10;2;4;-1
 "Segit";"Kruczyk";"Rucki";"Toporek";10;3;4;-1
-"Toporek";"Kruczyk";"Rucki";"Segit";NA;NA;NA;NA
+"Toporek";"Kruczyk";"Rucki";"Segit";3;10;-1;4
 "Kruczyk";"Toporek";"Rucki";"Segit";NA;NA;NA;NA
 "Segit";"Rucki";"Toporek";"Kruczyk";NA;NA;NA;NA
 "Segit";"Rucki";"Kruczyk";"Toporek";NA;NA;NA;NA
