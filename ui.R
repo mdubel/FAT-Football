@@ -3,6 +3,7 @@ library(shinydashboard)
 library(DT)
 library(rCharts)
 library(reshape)
+library(visNetwork)
 
 ui <- dashboardPage(
   dashboardHeader(
@@ -97,6 +98,8 @@ ui <- dashboardPage(
                solidHeader = TRUE,
                status = "primary",
                width = 12,
+               collapsible = TRUE,
+               collapsed = FALSE,
                dataTableOutput("TabelaPara")
               )
             ),
